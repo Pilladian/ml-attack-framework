@@ -8,11 +8,11 @@ def attribute_inference_attack(target, dataset, attr):
     return 0
 
 
-def membership_inference_attack(target, dataset, attr):
+def membership_inference_attack(target, dataset):
     return 0
 
 
-def model_inversion_attack(target, dataset, attr):
+def model_inversion_attack(target, dataset):
     return 0
 
 
@@ -43,10 +43,10 @@ if __name__ == '__main__':
     results['attribute'] = attribute_inference_attack(args.target, args.dataset, args.inferred_attribute) 
 
     # run membership inference attack
-    results['membership'] = membership_inference_attack(args.target, args.dataset, args.inferred_attribute) 
+    results['membership'] = membership_inference_attack(args.target, args.dataset) 
 
     # run model inversion attack
-    results['modelinv'] = model_inversion_attack(args.target, args.dataset, args.inferred_attribute) 
+    results['modelinv'] = model_inversion_attack(args.target, args.dataset) 
 
     # Output
     os.system('clear')
