@@ -294,7 +294,6 @@ class AttributeInferenceAttack:
                 _, predictions = torch.max(logits, dim=1)
 
                 num_correct += (predictions == y).sum()
-                print((predictions == y).sum() / len(logits))
                 num_samples += predictions.size(0)
 
         return float(num_correct) / float(num_samples)
