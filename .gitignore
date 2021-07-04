@@ -1,5 +1,6 @@
 # machine learning
 model.pt
+attribute-inference-attack-target.pt
 
 # virtualenv
 bin/
