@@ -8,90 +8,6 @@ import random
 import pandas
 import os
 from datasets import UTKFace
-import pickle
-
-
-def create_csvv(root, store, attr, partition):
-
-    data = pandas.DataFrame(columns=["img_file", attr])
-    data["img_file"] = os.listdir(f'{root}/{partition}')
-    
-    for idx, i in enumerate(os.listdir(f'{root}/{partition}')):
-        l = i.split('_')
-            
-        if attr == "gender":
-            # female
-            if l[1] == '1':
-                data[attr][idx] = 1
-            # male
-            elif l[1] == '0':
-                data[attr][idx] = 0
-
-        elif attr == "age":
-            data[attr][idx] = int(l[0])
-
-        elif attr == "race":
-            data[attr][idx] = int(l[2])
-
-    data.to_csv(store, index=False, header=True)
-    return store
-
-
-def create_csvvvvvv(root, store, attr, partition):
-    
-    data = pandas.DataFrame(columns=["img_file", attr])
-    gender_counter = {0: 0, 1: 0}
-    age_counter = dict()
-    for a in range(117):
-        age_counter[a] = 0
-    race_counter = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-
-    img_files = []
-    gender = []
-    ages = []
-    races = []
-
-    idx = 0
-    for i in os.listdir(f'{root}/{partition}'):
-        print(i)
-        l = i.split('_')
-
-        if attr == "gender":
-            # female
-            if l[1] == '1':
-                if gender_counter[int(l[1])] < 700:
-                    img_files.append(i)
-                    gender.append(int(l[1]))
-                    gender_counter[int(l[1])] += 1
-                    idx += 1
-            # male
-            elif l[1] == '0':
-                if gender_counter[int(l[1])] < 700:
-                    img_files.append(i)
-                    gender.append(int(l[1]))
-                    gender_counter[int(l[1])] += 1
-                    idx += 1
-
-        elif attr == "age":
-            if age_counter[int(l[0])] < 5:
-                img_files.append(i)
-                ages.append(int(l[0]))
-                age_counter[int(l[0])] += 1
-                idx += 1
-
-        elif attr == "race":
-            if race_counter[int(l[2])] < 1000:
-                img_files.append(i)
-                races.append(int(l[2]))
-                race_counter[int(l[2])] += 1
-                idx += 1
-
-    data["img_file"] = img_files
-    data[attr] = gender if attr == "gender" else ages if attr == "age" else races
-
-
-    data.to_csv(store, index=False, header=True)
-    return store
 
 
 def create_csv(root, store, attr):
@@ -136,7 +52,7 @@ def create_csv(root, store, attr):
                 idx += 1
 
         elif attr == "race":
-            if race_counter[int(l[2])] < 1000:
+            if race_counter[int(l[2])] < 1692:
                 img_files.append(i)
                 races.append(int(l[2]))
                 race_counter[int(l[2])] += 1
@@ -148,15 +64,18 @@ def create_csv(root, store, attr):
     data.to_csv(store, index=False, header=True)
     return store
 
+def get_num_classes(dataset, attr):
+    if dataset == "utkface":
+            if attr == "race":
+                return 5
+            elif attr == "age":
+                return 117
+            elif attr == "gender":
+                return 2
 
 def sample_utkface(attr):
     dir_path = "datasets/UTKFace/"
-
     csv_file = create_csv(dir_path, f"./attrinf-utkface-{attr}.csv", attr)
-
-    # csv_train = create_csv(dir_path, f"./attrinf-utkface-{attr}-train.csv", attr, 'train')
-    # csv_eval = create_csv(dir_path, f"./attrinf-utkface-{attr}-eval.csv", attr, 'eval')
-    # csv_test= create_csv(dir_path, f"./attrinf-utkface-{attr}-test.csv", attr, 'test')
 
     transform = transforms.Compose( 
                             [ transforms.Resize(size=256),
@@ -165,26 +84,10 @@ def sample_utkface(attr):
                               transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                             ])
 
-    # train_set = UTKFace(dir_path, csv_train, train=True, transform=transform)
-    # train_loader = DataLoader(dataset=train_set,
-    #                           shuffle=True,
-    #                           batch_size=32,
-    #                           num_workers=8)
-
-    # validation_set = UTKFace(dir_path, csv_eval, eval=True, transform=transform)
-    # validation_loader = DataLoader(dataset=validation_set,
-    #                                shuffle=True,
-    #                                batch_size=32,
-    #                                num_workers=8)
-
     dataset = UTKFace(dir_path, csv_file, transform=transform)
-    loader = DataLoader(dataset=dataset,
-                             shuffle=True,
-                             batch_size=32,
-                             num_workers=8)
+    loader = DataLoader(dataset=dataset, shuffle=True, batch_size=32, num_workers=8)
 
     return loader
-
 
 def sample_attack_dataset(dataset, attr):
     if dataset == "utkface":
