@@ -6,7 +6,8 @@ attribute-inference-attack-target.pt
 bin/
 lib/
 pyvenv.cfg
-
+etc/
+share/
 # Python
 __pycache__# Python
 __pycache__/
