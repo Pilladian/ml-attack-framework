@@ -2,6 +2,7 @@
 model.pt
 attribute-inference-attack-target.pt
 datasets/cifar10
+cifar-10-python.tar.gz
 
 # virtualenv
 bin/

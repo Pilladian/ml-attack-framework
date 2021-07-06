@@ -1,75 +1,120 @@
 # Python 3.8.5
 
-from Target import CNNCifar10
-from attrinf import create_csv
+from Target import CNN
 import torchvision.transforms as transforms
-from datasets import UTKFace
+from datasets import UTKFace, CIFAR10
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
+import argparse
+import os
 
-transform = transforms.Compose([transforms.Resize(size=32),
+
+def eval_model(model, loader):
+    num_correct = 0
+    num_samples = 0
+    model.eval()
+
+    model.eval()
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device=args.device)
+            y = y.to(device=args.device)
+
+            logits = model(x)
+            _, preds = torch.max(logits, dim=1)
+            num_correct += (preds == y).sum()
+            num_samples += preds.size(0)
+
+    return (float(num_correct) / float(num_samples))
+
+
+def main(args):
+    # transform for images
+    transform = transforms.Compose([transforms.Resize(size=32),
                               transforms.ToTensor(), 
                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-dataset_name = "UTKFace"
-dir_path = f"datasets/{dataset_name}"
-attr = 'gender'
+    # datasets
+    if args.dataset.lower() not in ['cifar10', 'utkface']:
+        print(f'\n\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
+        exit(0)
+    
+    if args.dataset.lower() == 'cifar10':
+        dataset_path = './datasets/CIFAR10/'
+        train_dataset = CIFAR10(dataset_path, train=True, transform=transform)
+        eval_dataset = CIFAR10(dataset_path, eval=True, transform=transform)
+        test_dataset = CIFAR10(dataset_path, test=True, transform=transform)
+   
+    elif args.dataset.lower() == 'utkface':
+        dataset_path = './datasets/UTKFace/'
+        train_dataset = UTKFace(dataset_path, train=True, transform=transform)
+        eval_dataset = UTKFace(dataset_path, eval=True, transform=transform)
+        test_dataset = UTKFace(dataset_path, test=True, transform=transform)
+    
+    # dataloader
+    train_loader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=32)
+    eval_loader = DataLoader(dataset=eval_dataset, shuffle=True, batch_size=32)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=32)
 
-csv_file = create_csv(dir_path, f"./attrinf-utkface-{attr}.csv", attr)
+    print(f' Training Set: {train_dataset.__len__()}')
+    print(f' Eval Set: {eval_dataset.__len__()}')
+    print(f' Test Set: {test_dataset.__len__()}\n')
 
-train_csv_file = 'attrinf-utkface-gender-train.csv'
-train_dataset = UTKFace(dir_path, train_csv_file, transform=transform)
-train_loader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=1, num_workers=8)
+    # target model
+    model = CNN().to(args.device)
 
-eval_csv_file = 'attrinf-utkface-gender-eval.csv'
-eval_dataset = UTKFace(dir_path, eval_csv_file, transform=transform)
-eval_loader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=1, num_workers=8)
+    # hyperparameter
+    criterion = nn.CrossEntropyLoss()
+    learning_rate = 0.0001
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    num_epochs = 50
 
-model = CNNCifar10().to('cpu')
+    # train target
+    model.train()
+    i = 0
+    for epoch in range(args.epochs):
+        for idx, (images, labels) in enumerate(train_loader):
+            images = images.to(args.device)
+            labels = labels.type(torch.int64).to(args.device)
+            i += 1
+            
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-device = 'cuda'
-model = CNNCifar10().to(device)
-criterion = nn.CrossEntropyLoss()
-learning_rate = 0.001
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-num_epochs = 50
-#step_count = len(train_loader_cifar10_target)
+        print (f' Epoch [{epoch+1:2}/{num_epochs}], Loss: {loss.item():.4f}, Acc: {eval_model(model, eval_loader):.4f}')
 
-model.train()
-for epoch in range(num_epochs):
-    for idx, (images, labels) in enumerate(train_loader):
-        images = images.to(device)
-        labels = labels.type(torch.int64).to(device)
-        
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-         
-        if idx > 500:
-            break
+    print(' Training completed...!\n')
+    torch.save(model.state_dict(), f'./Target/target-model-{args.dataset}.pth')
+    print(f' Model stored at ./Target/target-model-{args.dataset}.pth')
 
-    print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+    # test model
+    print(f' Accuracy on Test Set: {eval_model(model, test_loader)}')
 
-print ('Training completed...!')
-torch.save(model.state_dict(), './CNNCifar10.pth')
 
-num_correct = 0
-num_samples = 0
-model.eval()
+if __name__ == '__main__':
+    os.system('clear')
+    print("\n Privacy Enhancing Technologies - Semester Project - Train Target Model\n")
+    
+    # collect command line arguments
+    parser = argparse.ArgumentParser(description='Privacy Enhancing Technologies - Semester Project')
 
-model.eval()
-with torch.no_grad():
-    for x, y in eval_loader:
-        x = x.to(device=device)
-        y = y.to(device=device)
+    parser.add_argument("--dataset",
+                        required=True,
+                        help="[CIFAR10, UTKFace]")
+    
+    parser.add_argument("--epochs",
+                        default=50,
+                        help="Number of training epochs")
 
-        logits = model(x)
-        _, preds = torch.max(logits, dim=1)
-        num_correct += (preds == y).sum()
-        num_samples += preds.size(0)
+    parser.add_argument("--device",
+                        default='cpu',
+                        help="Provide cuda")
 
-print(float(num_correct) / float(num_samples))
+    args = parser.parse_args()
+
+    main(args)
