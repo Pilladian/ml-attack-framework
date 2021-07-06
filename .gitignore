@@ -1,6 +1,7 @@
 # machine learning
 model.pt
 attribute-inference-attack-target.pt
+datasets/cifar10
 
 # virtualenv
 bin/

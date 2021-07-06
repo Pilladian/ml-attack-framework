@@ -78,8 +78,7 @@ def sample_utkface(attr):
     csv_file = create_csv(dir_path, f"./attrinf-utkface-{attr}.csv", attr)
 
     transform = transforms.Compose( 
-                            [ transforms.Resize(size=256),
-                              transforms.CenterCrop(size=224),
+                            [ transforms.Resize(size=32),
                               transforms.ToTensor(),
                               transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                             ])
@@ -100,11 +99,9 @@ class MLP(nn.Module):
                  n_features,
                  n_hidden,
                  n_classes,
-                 activation,
-                 dropout):
+                 activation):
 
         super(MLP, self).__init__()
-        self.dropout = nn.Dropout(dropout)
         self.activation = activation
 
         self.lin1 = nn.Linear(n_features, n_hidden)
@@ -115,10 +112,8 @@ class MLP(nn.Module):
     def forward(self, inputs):
         h = self.lin1(inputs)
         h = self.activation(h)
-        h = self.dropout(h)
         h = self.lin2(h)
         h = self.activation(h)
-        h = self.dropout(h)
         h = self.lin3(h)
         out = self.logso(h)
         return out
@@ -131,7 +126,7 @@ class AttributeInferenceAttack:
         self.device = device
         self.params = params
         self.loss_fn = params['loss_fn']
-
+        
     def process_raw_data(self, loader):
         train_data = []
         eval_data = []
@@ -143,11 +138,10 @@ class AttributeInferenceAttack:
                 x = x.to(device=self.device)
                 y = y.to(device=self.device)
                 logits = self.target.get_last_hidden_layer(x)
-                #logits = self.target(x)
 
                 for i, logs in enumerate(logits):
                     idx = random.randint(0, 100)
-                    d = (list(logs.numpy()), int(y[i]))
+                    d = (list(logs.cpu().numpy()), int(y[i]))
                     if idx < 70:
                         train_data.append(d)
                     elif idx < 80:
@@ -183,6 +177,9 @@ class AttributeInferenceAttack:
                 loss.backward()
                 self.optimizer.step()
 
+            print(f"\t\t\t\t[1.3.1.1] Epoch [{epoch+1}/{self.params['epochs']}] Loss: {loss.item():0.4f} Acc: {self.evaluate(self.eval_dl):0.4f}", end='\r')
+        print()
+
     def evaluate(self, data):
         num_correct = 0
         num_samples = 0
@@ -205,11 +202,12 @@ class AttributeInferenceAttack:
         self.model = MLP(self.params['feat_amount'],       # feature amount
                          self.params['num_hnodes'],        # hidden nodes
                          self.params['num_classes'],       # num classes
-                         self.params['activation_fn'],     # activation function
-                         self.params['dropout'])           # dropout
+                         self.params['activation_fn'])     # activation function
 
         self.model.to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params['lr'])
-        self.train_model()
 
+        print("\t\t\t[1.3.1] Train Attack Model")
+        self.train_model()
+        print("\t\t\t[1.3.1] Run Attack against Target model\n\n")
         return self.evaluate(self.test_dl)
