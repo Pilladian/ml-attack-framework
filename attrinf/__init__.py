@@ -2,112 +2,28 @@
 
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import torch.utils.data.dataset as dataset
 import torch.nn as nn
 import torch
-import random
-import pandas
-import os
-from datasets import UTKFace
+
+from datasets import AttributeInferenceAttackRawDataset, AttributeInferenceAttackDataset
 
 
-def create_csv(root, store, attr):
-    
-    data = pandas.DataFrame(columns=["img_file", attr])
-    gender_counter = {0: 0, 1: 0}
-    age_counter = dict()
-    for a in range(117):
-        age_counter[a] = 0
-    race_counter = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-
-    img_files = []
-    gender = []
-    ages = []
-    races = []
-
-    idx = 0
-    for i in os.listdir(root):
-        l = i.split('_')
-
-        if attr == "gender":
-            # female
-            if l[1] == '1':
-                if gender_counter[int(l[1])] < 700:
-                    img_files.append(i)
-                    gender.append(int(l[1]))
-                    gender_counter[int(l[1])] += 1
-                    idx += 1
-            # male
-            elif l[1] == '0':
-                if gender_counter[int(l[1])] < 700:
-                    img_files.append(i)
-                    gender.append(int(l[1]))
-                    gender_counter[int(l[1])] += 1
-                    idx += 1
-
-        elif attr == "age":
-            if age_counter[int(l[0])] < 5:
-                img_files.append(i)
-                ages.append(int(l[0]))
-                age_counter[int(l[0])] += 1
-                idx += 1
-
-        elif attr == "race":
-            if race_counter[int(l[2])] < 1692:
-                img_files.append(i)
-                races.append(int(l[2]))
-                race_counter[int(l[2])] += 1
-                idx += 1
-
-    data["img_file"] = img_files
-    data[attr] = gender if attr == "gender" else ages if attr == "age" else races
-
-    data.to_csv(store, index=False, header=True)
-    return store
-
-def get_num_classes(dataset, attr):
-    if dataset == "utkface":
-            if attr == "race":
-                return 5
-            elif attr == "age":
-                return 117
-            elif attr == "gender":
-                return 2
-
-def sample_utkface(attr):
-    dir_path = "datasets/UTKFace/"
-    csv_file = create_csv(dir_path, f"./attrinf-utkface-{attr}.csv", attr)
-
-    transform = transforms.Compose( 
-                            [ transforms.Resize(size=32),
-                              transforms.ToTensor(),
-                              transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-                            ])
-
-    dataset = UTKFace(dir_path, csv_file, transform=transform)
-    loader = DataLoader(dataset=dataset, shuffle=True, batch_size=32, num_workers=8)
-
-    return loader
-
-def sample_attack_dataset(dataset, attr):
-    if dataset == "utkface":
-        return sample_utkface(attr)
-
-
+# Attack Model
 class MLP(nn.Module):
 
-    def __init__(self,
-                 n_features,
-                 n_hidden,
-                 n_classes,
-                 activation):
+    def __init__(self, parameter):
 
         super(MLP, self).__init__()
-        self.activation = activation
 
+        n_features = parameter['n_input_nodes']
+        n_hidden = parameter['n_hidden_nodes']
+        n_classes = parameter['n_output_nodes']
+        self.activation = parameter['activation_fn']
         self.lin1 = nn.Linear(n_features, n_hidden)
         self.lin2 = nn.Linear(n_hidden, int(n_hidden/2))
         self.lin3 = nn.Linear(int(n_hidden/2), n_classes)
-        self.logso = nn.LogSoftmax(dim=1)
+        self.logsoft = nn.LogSoftmax(dim=1)
 
     def forward(self, inputs):
         h = self.lin1(inputs)
@@ -115,99 +31,88 @@ class MLP(nn.Module):
         h = self.lin2(h)
         h = self.activation(h)
         h = self.lin3(h)
-        out = self.logso(h)
+        out = self.logsoft(h)
         return out
 
 
-class AttributeInferenceAttack:
+def get_raw_attack_dataset(dataset, attr):
+    transform = transforms.Compose( 
+                            [ transforms.Resize(size=32),
+                              transforms.ToTensor(),
+                              transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                            ])
+    
+    if dataset == 'utkface':
+        dir_path = 'datasets/UTKFace/'
+        raw_set = AttributeInferenceAttackRawDataset(dir_path, attr=attr, transform=transform)
 
-    def __init__(self, target, device, params):
-        self.target = target.to(device)
-        self.device = device
-        self.params = params
-        self.loss_fn = params['loss_fn']
+    raw_loader = torch.utils.data.DataLoader(raw_set, batch_size=32, shuffle=True)
+
+    return raw_loader
+
+def get_attack_loader(target_model, raw_loader, device):
+    data = []
+    
+    target_model.eval()
+    with torch.no_grad():
+        for x, y in raw_loader:
+            x = x.to(device=device)
+            y = y.to(device=device)
+            logits = target_model.get_last_hidden_layer(x)
+
+            for i, logs in enumerate(logits):
+                data.append((list(logs.cpu().numpy()), int(y[i])))
+
+    attack_dataset = AttributeInferenceAttackDataset(data)
+
+    size_train = int(attack_dataset.__len__() / 2)
+    size_tmp = attack_dataset.__len__() - size_train
+    size_eval = int(size_tmp / 3)
+    size_test = size_tmp - size_eval
+
+    train_attack_dataset, tmp_dataset = dataset.random_split(attack_dataset, [size_train, size_tmp])
+    eval_attack_dataset, test_attack_dataset = dataset.random_split(tmp_dataset, [size_eval , size_test])
+    
+    train_attack_loader = DataLoader(train_attack_dataset, batch_size=32, shuffle=True)
+    eval_attack_loader = DataLoader(eval_attack_dataset, batch_size=32, shuffle=True)
+    test_attack_loader = DataLoader(test_attack_dataset, batch_size=32)
+
+    return train_attack_loader, eval_attack_loader, test_attack_loader
         
-    def process_raw_data(self, loader):
-        train_data = []
-        eval_data = []
-        test_data = []
-        self.target.eval()
+def train_attack_model(model, train_loader, epochs, loss_fn, optimizer, device):
+    for epoch in range(epochs):
+        model.train()
 
-        with torch.no_grad():
-            for x, y in loader:
-                x = x.to(device=self.device)
-                y = y.to(device=self.device)
-                logits = self.target.get_last_hidden_layer(x)
+        for inputs, labels in train_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-                for i, logs in enumerate(logits):
-                    idx = random.randint(0, 100)
-                    d = (list(logs.cpu().numpy()), int(y[i]))
-                    if idx < 70:
-                        train_data.append(d)
-                    elif idx < 80:
-                        eval_data.append(d)
-                    else:
-                        test_data.append(d)
-        
-        self.train_dl = DataLoader(self.get_data(train_data), batch_size=self.params['batch_size'])
-        self.eval_dl = DataLoader(self.get_data(eval_data), batch_size=self.params['batch_size'])
-        self.test_dl = DataLoader(self.get_data(test_data), batch_size=self.params['batch_size'])
+            # forward
+            output = model(inputs)
+            loss = loss_fn(output, labels)
 
-    def get_data(self, list):
-        data = []
-        for input, label in list:
-            input = torch.FloatTensor(input)
-            data.append([input, label])
-        return data
+            # backward + optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-    def train_model(self):
-        for epoch in range(self.params['epochs']):
-            self.model.train()
+        print(f"\t\t[1.5] Train Attack Model: Epoch [{epoch+1}/{epochs}] Loss: {loss.item():0.4f}", end='\r')
+    print()
 
-            for inputs, labels in self.train_dl:
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
+def eval_attack_model(model, loader, device):
+    num_correct = 0
+    num_samples = 0
 
-                # forward
-                output = self.model(inputs)
-                loss = self.loss_fn(output, labels)
+    model.eval()
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device=device)
+            y = y.to(device=device)
 
-                # backward + optimization
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+            logits = model(x)
+            _, predictions = torch.max(logits, dim=1)
 
-            print(f"\t\t\t\t[1.3.1.1] Epoch [{epoch+1}/{self.params['epochs']}] Loss: {loss.item():0.4f} Acc: {self.evaluate(self.eval_dl):0.4f}", end='\r')
-        print()
+            num_correct += (predictions == y).sum()
+            num_samples += predictions.size(0)
 
-    def evaluate(self, data):
-        num_correct = 0
-        num_samples = 0
-
-        self.model.eval()
-        with torch.no_grad():
-            for x, y in data:
-                x = x.to(device=self.device)
-                y = y.to(device=self.device)
-
-                logits = self.model(x)
-                _, predictions = torch.max(logits, dim=1)
-
-                num_correct += (predictions == y).sum()
-                num_samples += predictions.size(0)
-
-        return float(num_correct) / float(num_samples)
-
-    def run(self):
-        self.model = MLP(self.params['feat_amount'],       # feature amount
-                         self.params['num_hnodes'],        # hidden nodes
-                         self.params['num_classes'],       # num classes
-                         self.params['activation_fn'])     # activation function
-
-        self.model.to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params['lr'])
-
-        print("\t\t\t[1.3.1] Train Attack Model")
-        self.train_model()
-        print("\t\t\t[1.3.1] Run Attack against Target model\n\n")
-        return self.evaluate(self.test_dl)
+    return float(num_correct) / float(num_samples)

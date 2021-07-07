@@ -70,7 +70,7 @@ class CIFAR10(Dataset):
         return (image, label)
 
 
-class AttributeInferenceAttackDataset(Dataset):
+class AttributeInferenceAttackRawDataset(Dataset):
 
     def __init__(self, root, attr, transform=None):
         self.root = root
@@ -113,44 +113,44 @@ class AttributeInferenceAttackDataset(Dataset):
                 # age
                 if self.attr == 'age':
                     if label not in utkface_counter['age']:
-                        utkface_counter['age'][label] = 1
+                        utkface_counter['age'][label] = 0
 
                     elif utkface_counter['age'][label] < 5:
-                        final_data["image_file"].append(image)
-                    
+                        utkface_counter['age'][label] += 1
+
                     else:
                         continue
-                    
+
+                    final_data["image_file"].append(image)
                     final_data["label"].append(label)
-                    utkface_counter['age'][label] += 1
 
                 # gender
                 elif self.attr == 'gender':
                     if label not in utkface_counter['gender']:
-                        utkface_counter['gender'][label] = 1
+                        utkface_counter['gender'][label] = 0
 
                     elif utkface_counter['gender'][label] < 10000:
-                        final_data["image_file"].append(image)
-                    
+                        utkface_counter['gender'][label] += 1
+
                     else:
                         continue
-                    
+
+                    final_data["image_file"].append(image)
                     final_data["label"].append(label)
-                    utkface_counter['gender'][label] += 1
 
                 # race
                 elif self.attr == 'race':
                     if label not in utkface_counter['race']:
-                        utkface_counter['race'][label] = 1
+                        utkface_counter['race'][label] = 0
 
                     elif utkface_counter['race'][label] < 1692:
-                        final_data["image_file"].append(image)
-                    
+                        utkface_counter['race'][label] += 1
+
                     else:
                         continue
 
+                    final_data["image_file"].append(image)
                     final_data["label"].append(label)
-                    utkface_counter['race'][label] += 1
 
         return final_data
 
@@ -166,6 +166,27 @@ class AttributeInferenceAttackDataset(Dataset):
             image = self.transform(image)
 
         return (image, label)
+
+
+class AttributeInferenceAttackDataset(Dataset):
+
+    def __init__(self, data):
+        self.data = self.modify_data(data)
+
+    def modify_data(self, data):
+        modified_data = []
+        for post, label in data:
+            post = torch.FloatTensor(post)
+            modified_data.append([post, label])
+        return modified_data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        post = self.data[idx][0]
+        label = self.data[idx][1]
+        return (post, label)
 
 
 class MIADataset(Dataset):

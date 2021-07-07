@@ -4,6 +4,7 @@ import argparse
 import os
 import torch
 import torch.nn as nn
+from torch.nn import parameter
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 
@@ -15,35 +16,40 @@ from Target import CNN
 
 
 def attribute_inference_attack(target, dataset, attr, device):
-    # Load Target Model  
-    print("\t\t[1.1] Load Target model")
-    model = CNN().to(device)
-    model.load_state_dict(torch.load(target, map_location=device))
+    # Load Target Model
+    print(f'\t\t[1.1] Load Target Model {target}')
+    target_model = CNN().to(device)
+    target_model.load_state_dict(torch.load(target, map_location=device))
 
-    # Create Attack Models Hyperparameter
-    hyperparameter = {'epochs': 50,
-                      'lr': 0.001,
-                      'batch_size': 16,
-                      'feat_amount': 100,
-                      'num_hnodes': 32,
-                      'num_classes': attrinf.get_num_classes(dataset, attr),
-                      'activation_fn': nn.Sigmoid(),
-                      'loss_fn': nn.CrossEntropyLoss()}
+    # Load dataset with specific attribute as label
+    print(f'\t\t[1.2] Load {dataset} dataset with {attr} as label')
+    raw_loader = attrinf.get_raw_attack_dataset(dataset, attr)
 
-    # Create Attack Model and Sample Attack Dataset
-    print("\t\t[1.2] Load selected Dataset")
-    data_loader = attrinf.sample_attack_dataset(dataset, attr)
-    
-    # Sample Attack Dataset
-    print("\t\t[1.3] Sample Attack Dataset using Target Model")
-    attack = attrinf.AttributeInferenceAttack(model, device=device, params=hyperparameter)
-    attack.process_raw_data(data_loader)
-    os.system(f'rm attrinf-utkface-{attr}.csv')
+    # Sample AttributeInferenceAttackDataset based on raw_loader and Target Model
+    print('\t\t[1.3] Sample Attack Dataset using Target Model')
+    train_attack_loader, eval_attack_loader, test_attack_loader = attrinf.get_attack_loader(target_model, raw_loader, device)
 
-    # Run Attack on test-set of Attacker Dataset
-    print("\t\t[1.4] Perform Attribute Inference Attack")
-    return attack.run()
+    # Create Attack Model
+    print('\t\t[1.4] Create Attack Model')
+    parameter = {}
+    parameter['n_input_nodes'] = 100
+    parameter['n_hidden_nodes'] = 32
+    parameter['n_output_nodes'] = 5 if dataset == 'utkface' else 5
+    parameter['lr'] = 0.001
+    parameter['activation_fn'] = nn.Sigmoid()
+    parameter['loss_fn'] = nn.CrossEntropyLoss()
+    parameter['epochs'] = 100
 
+    model = attrinf.MLP(parameter)
+    model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=parameter['lr'])
+
+    # Train Attack Model
+    attrinf.train_attack_model(model, train_attack_loader, parameter['epochs'], parameter['loss_fn'], optimizer, device)
+
+    # Perform Attribute Inference Attack
+    print(f'\t\t[1.6] Perform Attribute Inference Attack on Target Model: {attrinf.eval_attack_model(model, test_attack_loader, device):0.4f} Acc.')
+    exit(0)
 
 def membership_inference_attack(target, dataset, device):
     # get dataloader
@@ -93,17 +99,13 @@ def membership_inference_attack(target, dataset, device):
         n_samples = 0
         
         for data, labels in test_loader:
-            #print ("in")
             data = data.to(device)
             labels = labels.to(device)
             labels = labels.reshape(-1).detach().cpu().numpy()
-            #print (labels)
             outputs = model_attack(data)
             outputs = outputs.reshape(-1).detach().cpu().numpy().round()
-            #print (outputs)
             
             for i in range(min(32, data.size(0))):
-                #print ("hi")
                 label = labels[i]
                 pred = outputs[i]
                 if (label == pred and label != 0):
@@ -118,9 +120,6 @@ def membership_inference_attack(target, dataset, device):
 
         acc = 100.0 * n_correct / n_samples
         
-        # print(f'Accuracy of the network: {acc:.4f} %')
-        # print(f'Precision: {(tp/(tp+fp)):.4f}')
-        # print(f'Recall: {(tp/(tp+fn)):.4f}')
     return acc 
 
 def model_inversion_attack(target, dataset):
