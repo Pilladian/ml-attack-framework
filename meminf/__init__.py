@@ -47,7 +47,7 @@ def train_attack_model(model, train_loader, device):
             loss.backward()
             optimizer.step()
             
-        print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+        #print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     return model
 
@@ -61,7 +61,7 @@ def sample_cifar10():
     
     # Shadow Model training dataset from the same domain as the training dataset of the target model
     shadow = CIFAR10('datasets/CIFAR10/', test=True, transform=transform)
-    train_data_cifar10_shadow, test_data_cifar10_shadow = dataset.random_split(shadow, [1082, 1082])
+    train_data_cifar10_shadow, test_data_cifar10_shadow = dataset.random_split(shadow, [6433, 6434])
 
     train_loader_cifar10_target = torch.utils.data.DataLoader(train_data_cifar10_target, batch_size=32, shuffle=True)
     test_loader_cifar10_target = torch.utils.data.DataLoader(test_data_cifar10_target, batch_size=32, shuffle=False)
@@ -95,7 +95,7 @@ def get_data(dataset):
     elif dataset == 'utkface':
         return sample_utkface()
 
-def train_shadow_model(model, device, train_loader):
+def train_shadow_model(model, device, train_loader, ):
     criterion = nn.CrossEntropyLoss()
     learning_rate = 0.001
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -113,7 +113,7 @@ def train_shadow_model(model, device, train_loader):
             loss.backward()
             optimizer.step()
          
-        print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+        #print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     return model
 
