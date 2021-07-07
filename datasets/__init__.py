@@ -5,6 +5,7 @@ import os
 from PIL import Image
 import torch
 
+
 class UTKFace(Dataset):
 
     def __init__(self, root, train=False, eval=False, test=False, transform=None):
@@ -61,6 +62,104 @@ class CIFAR10(Dataset):
     def __getitem__(self, idx):
         img_loc = self.data["image_file"][idx]
         image = Image.open(os.path.join(self.data_loc, img_loc)).convert("RGB")
+        label = torch.tensor(float(self.data["label"][idx]))
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return (image, label)
+
+
+class AttributeInferenceAttackDataset(Dataset):
+
+    def __init__(self, root, attr, transform=None):
+        self.root = root
+        self.attr = attr
+        self.transform = transform
+        self.data = self.get_data()
+        
+    def get_data(self):
+        d = {"image_file": [], "label": []}
+
+        if 'UTKFace' in self.root:
+            lookup = {'age': 0, 'gender': 1, 'race': 2}
+
+        # collect all images from train eval and test directory
+        for i in os.listdir(self.root + 'train/'):
+            l = i.split('_')
+            d["image_file"].append('train/' + i)
+            d["label"].append(l[lookup[self.attr]])
+
+        for i in os.listdir(self.root + 'eval/'):
+            l = i.split('_')
+            d["image_file"].append('eval/' + i)
+            d["label"].append(l[lookup[self.attr]]) 
+
+        for i in os.listdir(self.root + 'test/'):
+            l = i.split('_')
+            d["image_file"].append('test/' + i)
+            d["label"].append(l[lookup[self.attr]])
+
+        # sample same amount of every attribute category
+        final_data = {"image_file": [], "label": []}
+
+        if 'UTKFace' in self.root:
+            utkface_counter = {'age': {}, 'gender': {}, 'race': {}}
+
+            for idx in range(len(d['image_file'])):
+                image = d['image_file'][idx]
+                label = d['label'][idx]
+
+                # age
+                if self.attr == 'age':
+                    if label not in utkface_counter['age']:
+                        utkface_counter['age'][label] = 1
+
+                    elif utkface_counter['age'][label] < 5:
+                        final_data["image_file"].append(image)
+                    
+                    else:
+                        continue
+                    
+                    final_data["label"].append(label)
+                    utkface_counter['age'][label] += 1
+
+                # gender
+                elif self.attr == 'gender':
+                    if label not in utkface_counter['gender']:
+                        utkface_counter['gender'][label] = 1
+
+                    elif utkface_counter['gender'][label] < 10000:
+                        final_data["image_file"].append(image)
+                    
+                    else:
+                        continue
+                    
+                    final_data["label"].append(label)
+                    utkface_counter['gender'][label] += 1
+
+                # race
+                elif self.attr == 'race':
+                    if label not in utkface_counter['race']:
+                        utkface_counter['race'][label] = 1
+
+                    elif utkface_counter['race'][label] < 1692:
+                        final_data["image_file"].append(image)
+                    
+                    else:
+                        continue
+
+                    final_data["label"].append(label)
+                    utkface_counter['race'][label] += 1
+
+        return final_data
+
+    def __len__(self):
+        return len(self.data['image_file'])
+
+    def __getitem__(self, idx):
+        img_loc = self.data["image_file"][idx]
+        image = Image.open(os.path.join(self.root, img_loc)).convert("RGB")
         label = torch.tensor(float(self.data["label"][idx]))
 
         if self.transform is not None:
