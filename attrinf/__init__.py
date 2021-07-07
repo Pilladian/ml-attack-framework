@@ -96,7 +96,7 @@ def train_attack_model(model, train_loader, epochs, loss_fn, optimizer, device):
             loss.backward()
             optimizer.step()
 
-        print(f"\t\t[1.5] Train Attack Model: Epoch [{epoch+1}/{epochs}] Loss: {loss.item():0.4f}", end='\r')
+        print(f"\t     [1.5] Train Attack Model: Epoch [{epoch+1}/{epochs}] Loss: {loss.item():0.4f}", end='\r')
     print()
 
 def eval_attack_model(model, loader, device):
