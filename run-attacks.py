@@ -4,10 +4,8 @@ import argparse
 import os
 import torch
 import torch.nn as nn
-from torch.nn import parameter
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
-
 
 import attrinf
 import meminf
@@ -48,8 +46,10 @@ def attribute_inference_attack(target, dataset, attr, device):
     attrinf.train_attack_model(model, train_attack_loader, parameter['epochs'], parameter['loss_fn'], optimizer, device)
 
     # Perform Attribute Inference Attack
-    print(f'\t\t[1.6] Perform Attribute Inference Attack on Target Model: {attrinf.eval_attack_model(model, test_attack_loader, device):0.4f} Acc.')
-    exit(0)
+    attack_acc = attrinf.eval_attack_model(model, test_attack_loader, device)
+    print(f'\t\t[1.6] Perform Attribute Inference Attack on Target Model: {attack_acc:0.4f} Acc.')
+
+    return attack_acc
 
 def membership_inference_attack(target, dataset, device):
     # get dataloader
@@ -118,7 +118,7 @@ def membership_inference_attack(target, dataset, device):
                     n_correct += 1
                 n_samples += 1
 
-        acc = 100.0 * n_correct / n_samples
+        acc = float(n_correct / n_samples)
         
     return acc 
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
         print("\n\t[1] Attribute Inference Attack")
         results['attribute'] = attribute_inference_attack(args.target, args.dataset.lower(), args.inferred_attribute, args.device) 
     else:
-        print("\n\t[1] Attribute Inference Attack will not be performed, \n\t    since a dataset containing images of numbers does not have any attribute that could be inferred")
+        print(f"\n\t[1] Attribute Inference Attack will not be performed, \n\t    since the {args.dataset} dataset does not have any attribute that could be inferred")
 
     # run membership inference attack
     print("\n\t[2] Membership Inference Attack")
@@ -177,10 +177,11 @@ if __name__ == '__main__':
 
     # run model inversion attack
     print("\n\t[3] Model Inversion Attack")
-    results['modelinv'] = model_inversion_attack(args.target, args.dataset) 
+    print("\t\t[3.1] Not yet implemented")
+    #results['modelinv'] = model_inversion_attack(args.target, args.dataset) 
 
     # Output
-    print(f"\n\n Attack Accuracies: \n \
-                \n\tAttribute-Inference-Attack: \t{results['attribute']:0.2f} \
-                \n\tMembership-Inference-Attack: \t{results['membership']:0.2f} \
-                \n\tModel-Inversion-Attack: \t{results['modelinv']:0.2f}\n\n")
+    print(f"\n\n Attack Accuracies: \n\n\t \
+                    Attribute-Inference-Attack: \t{results['attribute']:0.2f}\n\t \
+                    Membership-Inference-Attack: \t{results['membership']:0.2f}\n\t \
+                    Model-Inversion-Attack: \t\t{results['modelinv']:0.2f}\n\n")

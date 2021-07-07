@@ -68,12 +68,12 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     learning_rate = 0.0001
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    num_epochs = 50
+    num_epochs = int(args.epochs)
 
     # train target
     model.train()
     i = 0
-    for epoch in range(args.epochs):
+    for epoch in range(num_epochs):
         for idx, (images, labels) in enumerate(train_loader):
             images = images.to(args.device)
             labels = labels.type(torch.int64).to(args.device)
