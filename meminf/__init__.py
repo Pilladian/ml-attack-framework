@@ -24,6 +24,7 @@ class BCNet (nn.Module):
         x = torch.sigmoid(self.fc3(x))
         return x
 
+
 def sample_cifar10():
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
@@ -86,7 +87,7 @@ def train_shadow_model(model, device, train_loader, ):
             loss.backward()
             optimizer.step()
          
-        print(f"\t     [2.3] Create and Train Shadow model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
+        print(f"\t     [2.2] Create and Train Shadow model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
     print()
 
     return model
@@ -110,7 +111,7 @@ def train_attack_model(model, train_loader, device):
             loss.backward()
             optimizer.step()
             
-        print(f"\t     [2.5] Train Attack Model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
+        print(f"\t     [2.6] Train Attack Model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
     print()
 
     return model
@@ -207,131 +208,3 @@ def eval_attack_model(model_attack, test_loader, device):
         acc = float(n_correct / n_samples)
     
     return acc
-
-
-
-# ----------------------------------------------------------------------------------
-# from datasets import AttributeInferenceAttackDataset
-# from torch.utils.data import DataLoader
-
-# # Attack Model
-# class MLP(nn.Module):
-
-#     def __init__(self, parameter):
-
-#         super(MLP, self).__init__()
-
-#         n_features = parameter['n_input_nodes']
-#         n_hidden = parameter['n_hidden_nodes']
-#         n_classes = parameter['n_output_nodes']
-#         self.activation = parameter['activation_fn']
-#         self.lin1 = nn.Linear(n_features, n_hidden)
-#         self.lin2 = nn.Linear(n_hidden, int(n_hidden/2))
-#         self.lin3 = nn.Linear(int(n_hidden/2), n_classes)
-#         self.logsoft = nn.LogSoftmax(dim=1)
-
-#     def forward(self, inputs):
-#         h = self.lin1(inputs)
-#         h = self.activation(h)
-#         h = self.lin2(h)
-#         h = self.activation(h)
-#         h = self.lin3(h)
-#         out = self.logsoft(h)
-#         return out
-
-
-# def train_attack_model(model, train_loader, epochs, loss_fn, optimizer, device):
-#     for epoch in range(epochs):
-#         model.train()
-
-#         for inputs, labels in train_loader:
-#             inputs = inputs.to(device)
-#             labels = labels.to(device)
-
-#             # forward
-#             output = model(inputs)
-#             loss = loss_fn(output, labels)
-
-#             # backward + optimization
-#             optimizer.zero_grad()
-#             loss.backward()
-#             optimizer.step()
-
-#         print(f"\t\t[2.5] Train Attack Model: Epoch [{epoch+1}/{epochs}] Loss: {loss.item():0.4f}", end='\r')
-#     print()
-
-# def get_attack_train_data(model, train_loader, test_loader, device):
-#     with torch.no_grad():
-#         data = []
-
-#         for images, labels in train_loader:
-#             images = images.to(device)
-#             labels = labels.to(device)
-#             outputs = model(images)
-#             for i, logs in enumerate(outputs):
-#                 a = list(logs.cpu().numpy())
-#                 a.sort()
-#                 a = a[-3:]
-#                 data.append((a, int(labels[i])))
-        
-#         for images, labels in test_loader:
-#             images = images.to(device)
-#             labels = labels.to(device)
-#             outputs = model(images)
-#             for i, logs in enumerate(outputs):
-#                 a = list(logs.cpu().numpy())
-#                 a.sort()
-#                 a = a[-3:]
-#                 data.append((a, int(labels[i])))
-
-#     attack_dataset = AttributeInferenceAttackDataset(data)
-#     train_attack_loader = DataLoader(attack_dataset, batch_size=32, shuffle=True)
-
-#     return train_attack_loader
-
-# def get_attack_test_data(model, train_loader, test_loader, device):
-#     with torch.no_grad():
-#         data = []
-
-#         for images, labels in train_loader:
-#             images = images.to(device)
-#             labels = labels.to(device)
-#             outputs = model(images)
-#             for i, logs in enumerate(outputs):
-#                 a = list(logs.cpu().numpy())
-#                 a.sort()
-#                 a = a[-3:]
-#                 data.append((a, int(labels[i])))
-        
-#         for images, labels in test_loader:
-#             images = images.to(device)
-#             labels = labels.to(device)
-#             outputs = model(images)
-#             for i, logs in enumerate(outputs):
-#                 a = list(logs.cpu().numpy())
-#                 a.sort()
-#                 a = a[-3:]
-#                 data.append((a, int(labels[i])))
-
-#     attack_dataset = AttributeInferenceAttackDataset(data)
-#     test_attack_loader = DataLoader(attack_dataset, batch_size=32, shuffle=True)
-
-#     return test_attack_loader
-
-# def eval_attack_model(model, loader, device):
-#     num_correct = 0
-#     num_samples = 0
-
-#     model.eval()
-#     with torch.no_grad():
-#         for x, y in loader:
-#             x = x.to(device=device)
-#             y = y.to(device=device)
-
-#             logits = model(x)
-#             _, predictions = torch.max(logits, dim=1)
-
-#             num_correct += (predictions == y).sum()
-#             num_samples += predictions.size(0)
-
-#     return float(num_correct) / float(num_samples)

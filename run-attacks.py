@@ -59,9 +59,6 @@ def membership_inference_attack(target, dataset, device):
     print(f'\t     [2.1] Load Target Model {target}')
     target_model = CNN().to(device)
     target_model.load_state_dict(torch.load(target, map_location=device))
-    print("\t     [2.2] Sample Attack Test Data using Target")
-    test_data, test_label = meminf.get_attack_test_data(target_model, train_target_loader, test_target_loader, device)
-
 
     # create shadown model
     model_shadow = CNN().to(device)
@@ -69,71 +66,33 @@ def membership_inference_attack(target, dataset, device):
     model_shadow = meminf.train_shadow_model(model_shadow, device, train_shadow_loader)
 
     # get training data for attack model
-    print("\t     [2.4] Sample Attack Training Data using Shadown Model")
+    print("\t     [2.3] Sample Attack Training Data using Shadown Model")
     train_data, train_label = meminf.get_attack_train_data(model_shadow, train_shadow_loader, test_shadow_loader, device)
+    
+    # get test data for attack model    
+    print("\t     [2.4] Sample Attack Test Data using Target Model")
+    test_data, test_label = meminf.get_attack_test_data(target_model, train_target_loader, test_target_loader, device)
 
     # create attack datasets
     test_data = StandardScaler().fit_transform(test_data)
     train_data = StandardScaler().fit_transform(train_data)
 
     # dataloader for attack  model
-    trainset = datasets.MIADataset(train_data, train_label)
-    testset = datasets.MIADataset(test_data, test_label)
+    trainset = datasets.MembershipInferenceAttackDataset(train_data, train_label)
+    testset = datasets.MembershipInferenceAttackDataset(test_data, test_label)
     train_loader = DataLoader(trainset, batch_size=32, shuffle=True)
     test_loader = DataLoader(testset, batch_size=32, shuffle=True)    
 
     # attack model
+    print("\t     [2.5] Create Attack Model")
     model_attack = meminf.BCNet(input_shape=train_data.shape[1]).to(device)
-
-    # Evaluate attack
-    print("\t     [2.6] Perform Membership Inference Attack")
     model_attack = meminf.train_attack_model(model_attack, train_loader, device)
-    attack_acc = meminf.eval_attack_model(model_attack, test_loader, device)
     
-    return attack_acc 
-
-def membership_inference_attack_old(target, dataset, device):
-    # get dataloader
-    train_shadow_loader, test_shadow_loader, train_target_loader, test_target_loader = meminf.get_data(dataset)
-
-    # get test data for attack model
-    print(f'\t\t[2.1] Load Target Model {target}')
-    target_model = CNN().to(device)
-    target_model.load_state_dict(torch.load(target, map_location=device))
-    print("\t\t[2.2] Sample Attack Test Data using Target")
-    test_attack_loader = meminf.get_attack_test_data(target_model, train_target_loader, test_target_loader, device)
-
-    # create shadown model
-    model_shadow = CNN().to(device)
-    # train shadow model
-    model_shadow = meminf.train_shadow_model(model_shadow, device, train_shadow_loader)
-
-    # get training data for attack model
-    print("\t\t[2.4] Sample Attack Training Data using Shadown Model")
-    train_attack_loader = meminf.get_attack_train_data(model_shadow, train_shadow_loader, test_shadow_loader, device)
-
-
-    # attack model
-    print('\t\t[2.5] Create Attack Model')
-    parameter = {}
-    parameter['n_input_nodes'] = 3
-    parameter['n_hidden_nodes'] = 32
-    parameter['n_output_nodes'] = 2 if dataset == 'utkface' else 2
-    parameter['lr'] = 0.001
-    parameter['activation_fn'] = nn.Sigmoid()
-    parameter['loss_fn'] = nn.CrossEntropyLoss()
-    parameter['epochs'] = 100
-
-    model = meminf.MLP(parameter)
-    model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=parameter['lr'])
-
     # Evaluate attack
-    print("\t\t[2.6] Perform Membership Inference Attack")
-    meminf.train_attack_model(model, train_attack_loader, parameter['epochs'], parameter['loss_fn'], optimizer, device)
-    attack_acc = meminf.eval_attack_model(model, test_attack_loader, device)
+    attack_acc = meminf.eval_attack_model(model_attack, test_loader, device)
+    print(f"\t     [2.7] Perform Membership Inference Attack on Target Model: {attack_acc:0.4f} Acc.")
     
-    return attack_acc 
+    return attack_acc  
 
 def model_inversion_attack(target, dataset):
     return 0
@@ -186,12 +145,12 @@ if __name__ == '__main__':
 
     # run membership inference attack
     print("\n\t[2] Membership Inference Attack")
-    results['membership'] = membership_inference_attack(args.target, args.dataset, args.device) 
+    results['membership'] = membership_inference_attack(args.target, args.dataset.lower(), args.device) 
 
     # run model inversion attack
     print("\n\t[3] Model Inversion Attack")
     print("\t\t[3.1] Not yet implemented")
-    #results['modelinv'] = model_inversion_attack(args.target, args.dataset) 
+    #results['modelinv'] = model_inversion_attack(args.target, args.dataset.lower()) 
 
     # Output
     print(f"\n\n Attack Accuracies: \n\n\t \
