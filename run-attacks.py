@@ -110,8 +110,24 @@ if __name__ == '__main__':
                         help="File path to target model that should be tested")
 
     parser.add_argument("--dataset",
-                        required=True,
+                        default='',
                         help="Choose between [UTKFace, CIFAR10]")
+    
+    parser.add_argument("--target-member",
+                        default='',
+                        help="Provide path to target member data")
+    
+    parser.add_argument("--target-non-member",
+                        default='',
+                        help="Provide path to target non member data")
+
+    parser.add_argument("--shadow-member",
+                        default='',
+                        help="Provide path to shadow member data")
+    
+    parser.add_argument("--shadow-non-member",
+                        default='',
+                        help="Provide path to shadow non member data")
 
     parser.add_argument("--device",
                         default='cpu',
@@ -124,8 +140,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Check for correct dataset
-    if args.dataset.lower() not in ['utkface', 'cifar10']:
+    if args.dataset.lower() != '' and args.dataset.lower() not in ['utkface', 'cifar10']:
         print(f'\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
+        exit(0)
+    
+    if args.dataset == '' and (args.target_member == '' or args.target_non_member == '' or args.shadow_member == '' or args.shadow_non_member == ''):
+        print(f'\n\t[!] Error ocurred: Please either provide a given dataset (--dataset => CIFAR10 or UTKFace) or provide all needed information (--target-member, --target-non-member, --shadow-member, --shadow-non-member)\n')
         exit(0)
 
     # results
