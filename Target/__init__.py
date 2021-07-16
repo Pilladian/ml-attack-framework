@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, out):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5) # 32*32 -> 28*28
         self.pool = nn.MaxPool2d(2, 2) # 28*28 -> 14*14
@@ -14,7 +14,7 @@ class CNN(nn.Module):
         
         self.fc1 = nn.Linear(400, 200) # 16*5*5 = 400
         self.fc2 = nn.Linear(200, 100)
-        self.fc3 = nn.Linear(100, 10)
+        self.fc3 = nn.Linear(100, out)
         
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
