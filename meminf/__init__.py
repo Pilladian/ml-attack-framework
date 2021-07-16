@@ -7,7 +7,7 @@ import torch.nn as nn
 import numpy as np
 
 
-from datasets import CIFAR10, UTKFace
+from datasets import CIFAR10, UTKFace, MNIST
 
 
 # Attack Model
@@ -35,7 +35,9 @@ def sample_cifar10():
     
     # Shadow Model training dataset from the same domain as the training dataset of the target model
     shadow = CIFAR10('datasets/CIFAR10/', test=True, transform=transform)
-    train_data_cifar10_shadow, test_data_cifar10_shadow = dataset.random_split(shadow, [6433, 6434])
+    length = shadow.__len__()
+    l = int(shadow.__len__() / 2)
+    train_data_cifar10_shadow, test_data_cifar10_shadow = dataset.random_split(shadow, [l, length - l])
 
     train_loader_cifar10_target = torch.utils.data.DataLoader(train_data_cifar10_target, batch_size=32, shuffle=True)
     test_loader_cifar10_target = torch.utils.data.DataLoader(test_data_cifar10_target, batch_size=32, shuffle=False)
@@ -54,7 +56,9 @@ def sample_utkface():
     
     # Shadow Model training dataset from the same domain as the training dataset of the target model
     shadow = UTKFace('datasets/UTKFace/', test=True, transform=transform)
-    train_data_utkface_shadow, test_data_utkface_shadow = dataset.random_split(shadow, [2541, 2540])
+    length = shadow.__len__()
+    l = int(shadow.__len__() / 2)
+    train_data_utkface_shadow, test_data_utkface_shadow = dataset.random_split(shadow, [l, length - l])
 
     train_loader_utkface_target = torch.utils.data.DataLoader(train_data_utkface_target, batch_size=32, shuffle=True)
     test_loader_utkface_target = torch.utils.data.DataLoader(test_data_utkface_target, batch_size=32, shuffle=False)
@@ -63,11 +67,34 @@ def sample_utkface():
     
     return train_loader_utkface_shadow, test_loader_utkface_shadow, train_loader_utkface_target, test_loader_utkface_target
 
+def sample_mnist():
+    transform = transforms.Compose([transforms.Resize(size=32), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    # datasets/MNIST/train was used to train the tagret model -> Use it to sample Attack Dataset pos. samples
+    train_data_mnist_target = MNIST('datasets/MNIST/', train=True, transform=transform)
+    # datasets/MNIST/eval was not used to train the tagret model -> Use it to sample Attack Dataset neg. samples
+    test_data_mnist_target = MNIST('datasets/MNIST/', eval=True, transform=transform)
+    
+    # Shadow Model training dataset from the same domain as the training dataset of the target model
+    shadow = MNIST('datasets/MNIST/', test=True, transform=transform)
+    length = shadow.__len__()
+    l = int(shadow.__len__() / 2)
+    train_data_mnist_shadow, test_data_mnist_shadow = dataset.random_split(shadow, [l, length - l])
+
+    train_loader_mnist_target = torch.utils.data.DataLoader(train_data_mnist_target, batch_size=32, shuffle=True)
+    test_loader_mnist_target = torch.utils.data.DataLoader(test_data_mnist_target, batch_size=32, shuffle=False)
+    train_loader_mnist_shadow = torch.utils.data.DataLoader(train_data_mnist_shadow, batch_size=64, shuffle=True)
+    test_loader_mnist_shadow = torch.utils.data.DataLoader(test_data_mnist_shadow, batch_size=64, shuffle=False)
+    
+    return train_loader_mnist_shadow, test_loader_mnist_shadow, train_loader_mnist_target, test_loader_mnist_target
+
 def get_data(dataset):
     if dataset == 'cifar10':
         return sample_cifar10()
     elif dataset == 'utkface':
         return sample_utkface()
+    elif dataset == 'mnist':
+        return sample_mnist()
 
 def train_shadow_model(model, device, train_loader, ):
     criterion = nn.CrossEntropyLoss()
@@ -87,7 +114,7 @@ def train_shadow_model(model, device, train_loader, ):
             loss.backward()
             optimizer.step()
          
-        print(f"\t     [2.2] Create and Train Shadow model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
+        print(f"\t     [2.3] Create and Train Shadow model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
     print()
 
     return model
@@ -111,7 +138,7 @@ def train_attack_model(model, train_loader, device):
             loss.backward()
             optimizer.step()
             
-        print(f"\t     [2.6] Train Attack Model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
+        print(f"\t     [2.7] Train Attack Model: Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", end='\r')
     print()
 
     return model

@@ -2,7 +2,7 @@
 
 from Target import CNN
 import torchvision.transforms as transforms
-from datasets import UTKFace, CIFAR10
+from datasets import UTKFace, CIFAR10, MNIST
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
@@ -36,21 +36,30 @@ def main(args):
                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     # datasets
-    if args.dataset.lower() not in ['cifar10', 'utkface']:
+    if args.dataset.lower() not in ['cifar10', 'utkface', 'mnist']:
         print(f'\n\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
         exit(0)
     
     if args.dataset.lower() == 'cifar10':
+        model = CNN(10).to(args.device)
         dataset_path = './datasets/CIFAR10/'
         train_dataset = CIFAR10(dataset_path, train=True, transform=transform)
         eval_dataset = CIFAR10(dataset_path, eval=True, transform=transform)
         test_dataset = CIFAR10(dataset_path, test=True, transform=transform)
    
     elif args.dataset.lower() == 'utkface':
+        model = CNN(2).to(args.device)
         dataset_path = './datasets/UTKFace/'
         train_dataset = UTKFace(dataset_path, train=True, transform=transform)
         eval_dataset = UTKFace(dataset_path, eval=True, transform=transform)
         test_dataset = UTKFace(dataset_path, test=True, transform=transform)
+    
+    elif args.dataset.lower() == 'mnist':
+        model = CNN(10).to(args.device)
+        dataset_path = './datasets/MNIST/'
+        train_dataset = MNIST(dataset_path, train=True, transform=transform)
+        eval_dataset = MNIST(dataset_path, eval=True, transform=transform)
+        test_dataset = MNIST(dataset_path, test=True, transform=transform)
     
     # dataloader
     train_loader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=32)
@@ -60,9 +69,6 @@ def main(args):
     print(f' Training Set: {train_dataset.__len__()}')
     print(f' Eval Set: {eval_dataset.__len__()}')
     print(f' Test Set: {test_dataset.__len__()}\n')
-
-    # target model
-    model = CNN().to(args.device)
 
     # hyperparameter
     criterion = nn.CrossEntropyLoss()

@@ -13,14 +13,28 @@ import datasets
 from Target import CNN
 
 
+def lookup(dataset):
+    datasets = {'utkface': 'UTKFace',
+                'cifar10': 'CIFAR10',
+                'mnist': 'MNIST'}
+    
+    return datasets[dataset]
+
+def feature_size(dataset):
+    feature_sizes = {'utkface': 2,
+                     'cifar10': 10,
+                     'mnist': 10}
+    
+    return feature_sizes[dataset]
+
 def attribute_inference_attack(target, dataset, attr, device):
     # Load Target Model
     print(f'\t     [1.1] Load Target Model {target}')
-    target_model = CNN().to(device)
+    target_model = CNN(feature_size(dataset)).to(device)
     target_model.load_state_dict(torch.load(target, map_location=device))
 
     # Load dataset with specific attribute as label
-    print(f'\t     [1.2] Load {dataset} dataset with {attr} as label')
+    print(f'\t     [1.2] Load ./datasets/{lookup(dataset)}/* with {attr} as label')
     raw_loader = attrinf.get_raw_attack_dataset(dataset, attr)
 
     # Sample AttributeInferenceAttackDataset based on raw_loader and Target Model
@@ -52,25 +66,29 @@ def attribute_inference_attack(target, dataset, attr, device):
     return attack_acc
 
 def membership_inference_attack(target, dataset, device):
-    # get dataloader
-    train_shadow_loader, test_shadow_loader, train_target_loader, test_target_loader = meminf.get_data(dataset)
-
     # get test data for attack model
     print(f'\t     [2.1] Load Target Model {target}')
-    target_model = CNN().to(device)
+    target_model = CNN(feature_size(dataset)).to(device)
     target_model.load_state_dict(torch.load(target, map_location=device))
+    
+    # get dataloader
+    print(f'\t     [2.2] Load provided dataset')
+    print(f'\t\t   [2.2.1] ./datasets/{lookup(dataset)}/train/* \t Target Members')
+    print(f'\t\t   [2.2.1] ./datasets/{lookup(dataset)}/eval/* \t Target Non-Members')
+    print(f'\t\t   [2.2.1] ./datasets/{lookup(dataset)}/test/* \t Shadow Members and Shadow Non-Members')
+    train_shadow_loader, test_shadow_loader, train_target_loader, test_target_loader = meminf.get_data(dataset)
 
     # create shadown model
-    model_shadow = CNN().to(device)
+    model_shadow = CNN(feature_size(dataset)).to(device)
     # train shadow model
     model_shadow = meminf.train_shadow_model(model_shadow, device, train_shadow_loader)
 
     # get training data for attack model
-    print("\t     [2.3] Sample Attack Training Data using Shadown Model")
+    print("\t     [2.4] Sample Attack Training Data using Shadown Model")
     train_data, train_label = meminf.get_attack_train_data(model_shadow, train_shadow_loader, test_shadow_loader, device)
     
     # get test data for attack model    
-    print("\t     [2.4] Sample Attack Test Data using Target Model")
+    print("\t     [2.5] Sample Attack Test Data using Target Model")
     test_data, test_label = meminf.get_attack_test_data(target_model, train_target_loader, test_target_loader, device)
 
     # create attack datasets
@@ -84,13 +102,13 @@ def membership_inference_attack(target, dataset, device):
     test_loader = DataLoader(testset, batch_size=32, shuffle=True)    
 
     # attack model
-    print("\t     [2.5] Create Attack Model")
+    print("\t     [2.6] Create Attack Model")
     model_attack = meminf.BCNet(input_shape=train_data.shape[1]).to(device)
     model_attack = meminf.train_attack_model(model_attack, train_loader, device)
     
     # Evaluate attack
     attack_acc = meminf.eval_attack_model(model_attack, test_loader, device)
-    print(f"\t     [2.7] Perform Membership Inference Attack on Target Model: {attack_acc:0.4f} Acc.")
+    print(f"\t     [2.8] Perform Membership Inference Attack on Target Model: {attack_acc:0.4f} Acc.")
     
     return attack_acc  
 
@@ -111,23 +129,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--dataset",
                         default='',
-                        help="Choose between [UTKFace, CIFAR10]")
-    
-    parser.add_argument("--target-member",
-                        default='',
-                        help="Provide path to target member data")
-    
-    parser.add_argument("--target-non-member",
-                        default='',
-                        help="Provide path to target non member data")
-
-    parser.add_argument("--shadow-member",
-                        default='',
-                        help="Provide path to shadow member data")
-    
-    parser.add_argument("--shadow-non-member",
-                        default='',
-                        help="Provide path to shadow non member data")
+                        help="Choose between [UTKFace, CIFAR10, MNIST]")
 
     parser.add_argument("--device",
                         default='cpu',
@@ -140,12 +142,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Check for correct dataset
-    if args.dataset.lower() != '' and args.dataset.lower() not in ['utkface', 'cifar10']:
+    if args.dataset.lower() != '' and args.dataset.lower() not in ['utkface', 'cifar10', 'mnist']:
         print(f'\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
-        exit(0)
-    
-    if args.dataset == '' and (args.target_member == '' or args.target_non_member == '' or args.shadow_member == '' or args.shadow_non_member == ''):
-        print(f'\n\t[!] Error ocurred: Please either provide a given dataset (--dataset => CIFAR10 or UTKFace) or provide all needed information (--target-member, --target-non-member, --shadow-member, --shadow-non-member)\n')
         exit(0)
 
     # results
@@ -154,14 +152,14 @@ if __name__ == '__main__':
                 'modelinv': 0}
 
     # run attribute inference attack
-    if args.dataset != 'cifar10':
+    if args.dataset not in ['cifar10', 'mnist']:
         if args.inferred_attribute == '':
             print(f'\n\t[!] Error ocurred: --inferred-attribute cannot be empty. Use --help / -h for printing the help page\n')
             exit(0)
         print("\n\t[1] Attribute Inference Attack")
         results['attribute'] = attribute_inference_attack(args.target, args.dataset.lower(), args.inferred_attribute, args.device) 
     else:
-        print(f"\n\t[1] Attribute Inference Attack will not be performed, \n\t    since the {args.dataset} dataset does not have any attribute that could be inferred")
+        print(f"\n\t[1] Attribute Inference Attack will not be performed, \n\t    since the {lookup(args.dataset)} dataset does not have any attribute that could be inferred")
 
     # run membership inference attack
     print("\n\t[2] Membership Inference Attack")
