@@ -15,26 +15,47 @@ Now install all requirements using:
 ```bash
 pip install -r requirements.txt
 ```
+---
 
-## Run the Attacks
-Since we already provide pre-trained target models, you can run the attacks using:
-```bash
-python run-attacks.py --target ./Target/target-model-utkface.pth --dataset utkface --inferred-attribute race --device cuda
-```
-or 
-```bash
-python run-attacks.py --target ./Target/target-model-cifar10.pth --dataset cifar10 --device cuda
-```
+## Evaluation of Semester Project
 
-## Train Target Models
-You can also train your own target models using:
-```bash
-python train-target.py --dataset utkface --epochs 100 --device cuda
-```
-or
-```bash
-python train-target.py --dataset cifar10 --epochs 100 --device cuda
-```
+### Phase 1: Use our own trained target models
+- All 3 attacks on UTKFace dataset and UTKFace-Target model
+    ```bash
+    python run-attacks.py --target ./Target/target-model-utkface.pth --dataset utkface --inferred-attribute race --device cuda
+    ```
+
+- Membership Inference on CIFAR10 dataset and CIFAR10-Target model
+    ```bash
+    python run-attacks.py --target ./Target/target-model-cifar10.pth --dataset cifar10 --device cuda
+    ```
+
+### Phase 2: Use your own trained target models
+Since we need to define the model class befor we can load the target model ([https://pytorch.org/tutorials/beginner/saving_loading_models.html](https://pytorch.org/tutorials/beginner/saving_loading_models.html)) to perform our attacks please use our class `CNN()` located in [Target/\_\_init__.py](Target/__init__.py). You can simply use our provided script [./train-target.py](train-target.py) to train your own target model. 
+- UTKFace dataset
+    ```bash
+    python train-target.py --dataset utkface --epochs 100 --device cuda
+    ```
+- CIFAR10 dataset
+    ```bash
+    python train-target.py --dataset cifar10 --epochs 100 --device cuda
+    ```
+
+**[ ! ] Please note the following**
+
+Since the argument you provide to our program is the used dataset, we need you to follow the steps to create the correct input for our programs.
+
+- create a new folder `dataset`
+- create directories `dataset/train`, `dataset/eval` and `dataset/test`
+- put samples used to **train** the target model in `dataset/train/` (target-members)
+- put samples used to **evaluate** the target model in `dataset/eval/` (target-non-members)
+- put samples that will be used to **train** and **evaluate** the shadow model in `dataset/test/` (shadow-members and shadow-non-members)
+- rename `dataset` into one of [`CIFAR10`, `MNIST`, `UTKFace`] depending on your used samples 
+- move the created dataset into [datasets](datasets/) replacing the current split
+
+It is important that the samples you provide fullfil the requirements listed [here](datasets/README.md). You can now train your target models and after that run our implemented attacks against them.
+
+---
 
 ## Functionality of the Code
 
