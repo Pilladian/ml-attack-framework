@@ -1,7 +1,20 @@
 # Report
 
 ## Attribute Inference Attack
-An attribute inference attack aims to steal sensitive attributes from the data provided to the target model. As our target model we choose a Convolutional Neural Network. We trained it on two datasets UTKFace and CIFAR10. Since there is no attribute to infer in the CIFAR10 dataset, the AIA will only be performed on the target model trained with the UTKFace dataset. As our attack model we use a Multilayer Perceptron. When the original target model is trained on gender classification it achieves ~0.80 accuracy. Our attribute inference attack that aims to steal the race achieves an accuracy of ~0.53. 
+
+| Dataset | Target Acc. | Attribute | Attack Performance (Accuracy) | Guessing Baseline
+|---      |---          |---        |---                            |---
+| AT&T    | ~0.87       | Glasses   | ~0.75                         | 0.5
+| UTKFace | ~0.80       | Race      | ~0.53                         | 0.2
+
+--- 
 
 ## Membership Inference Attack
-A membership inference attack aims to infer, whether a provided data sample has been used to train the target model or not. As our target model we choose the same Convolutional Neural Network like for all other attacks. We can perform the attack on both target models - UTKFace and CIFAR10. Depending on the amount of epochs, the target model was trained on, the performance varies. The more the target model is overtrained, the better the performance. Note, that the target model trained with UTKFace achieves ~0.80 accuracy while the target model trained on CIFAR10 only achieves ~0.56 accuracy. Because of that, we see an average attack performance on UTKFace of ~0.75 accuracy but on CIFAR10 only ~0.53 accuracy. 
+
+| Dataset | Target Acc. | Attack Performance (Accuracy)
+|---      |---          |---
+| AT&T    | ~0.87       | ~0.53
+| CIFAR10 | ~0.56       | ~0.53
+| MNIST   | ~0.99       | ~0.56
+| UTKFace | ~0.80       | ~0.75
+

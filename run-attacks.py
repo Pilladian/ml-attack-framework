@@ -161,7 +161,7 @@ if __name__ == '__main__':
         print("\n\t[1] Attribute Inference Attack")
         results['attribute'] = attribute_inference_attack(args.target, args.dataset.lower(), args.inferred_attribute, args.device) 
     else:
-        print(f"\n\t[1] Attribute Inference Attack will not be performed, \n\t    since the {lookup(args.dataset)} dataset does not have any attribute that could be inferred")
+        print(f"\n\t[1] Attribute Inference Attack will not be performed, \n\t    since the {lookup(args.dataset)} dataset does not provide any attribute that could be interesting for us to infer")
 
     # run membership inference attack
     print("\n\t[2] Membership Inference Attack")
