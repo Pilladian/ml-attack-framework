@@ -7,7 +7,7 @@ import torch.nn as nn
 import numpy as np
 
 
-from datasets import CIFAR10, UTKFace, MNIST
+from datasets import CIFAR10, UTKFace, MNIST, ATT
 
 
 # Attack Model
@@ -88,6 +88,27 @@ def sample_mnist():
     
     return train_loader_mnist_shadow, test_loader_mnist_shadow, train_loader_mnist_target, test_loader_mnist_target
 
+def sample_att():
+    transform = transforms.Compose([transforms.Resize(size=(32,32)), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    # datasets/MNIST/train was used to train the tagret model -> Use it to sample Attack Dataset pos. samples
+    train_data_mnist_target = ATT('datasets/ATT/', train=True, transform=transform)
+    # datasets/MNIST/eval was not used to train the tagret model -> Use it to sample Attack Dataset neg. samples
+    test_data_mnist_target = ATT('datasets/ATT/', eval=True, transform=transform)
+    
+    # Shadow Model training dataset from the same domain as the training dataset of the target model
+    shadow = ATT('datasets/ATT/', test=True, transform=transform)
+    length = shadow.__len__()
+    l = int(shadow.__len__() / 2)
+    train_data_mnist_shadow, test_data_mnist_shadow = dataset.random_split(shadow, [l, length - l])
+
+    train_loader_mnist_target = torch.utils.data.DataLoader(train_data_mnist_target, batch_size=32, shuffle=True)
+    test_loader_mnist_target = torch.utils.data.DataLoader(test_data_mnist_target, batch_size=32, shuffle=False)
+    train_loader_mnist_shadow = torch.utils.data.DataLoader(train_data_mnist_shadow, batch_size=64, shuffle=True)
+    test_loader_mnist_shadow = torch.utils.data.DataLoader(test_data_mnist_shadow, batch_size=64, shuffle=False)
+    
+    return train_loader_mnist_shadow, test_loader_mnist_shadow, train_loader_mnist_target, test_loader_mnist_target
+
 def get_data(dataset):
     if dataset == 'cifar10':
         return sample_cifar10()
@@ -95,6 +116,8 @@ def get_data(dataset):
         return sample_utkface()
     elif dataset == 'mnist':
         return sample_mnist()
+    elif dataset == 'att':
+        return sample_att()
 
 def train_shadow_model(model, device, train_loader, ):
     criterion = nn.CrossEntropyLoss()

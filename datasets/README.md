@@ -1,5 +1,26 @@
 # Lookup Table
 
+## AT&T
+
+File format: \<subject\>\_\<glasses\>\_\<img_id\>.png
+
+| subject | meaning
+|---      |---
+| 0       | subject 0
+| ...     | ...
+| 39      | subject 39
+
+| glasses | meaning
+|---      |---
+| 0       | does not wear glasses
+| 1       | wears glasses
+
+| img_id  | meaning
+|---      |---
+| 0       | 0th image of this subject
+| ...     | ...
+| 10      | 10th image of this subject
+
 ## CIFAR10
 
 File format: \<label\>\_\<rand_int\>.png

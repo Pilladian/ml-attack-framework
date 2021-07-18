@@ -37,13 +37,15 @@ class MLP(nn.Module):
 
 def get_raw_attack_dataset(dataset, attr):
     transform = transforms.Compose( 
-                            [ transforms.Resize(size=32),
+                            [ transforms.Resize(size=(32,32)),
                               transforms.ToTensor(),
                               transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                             ])
     
     if dataset == 'utkface':
         dir_path = 'datasets/UTKFace/'
+    elif dataset == 'att':
+        dir_path = 'datasets/ATT/'
         raw_set = AttributeInferenceAttackRawDataset(dir_path, attr=attr, transform=transform)
 
     raw_loader = torch.utils.data.DataLoader(raw_set, batch_size=32, shuffle=True)

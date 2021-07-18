@@ -16,14 +16,16 @@ from Target import CNN
 def lookup(dataset):
     datasets = {'utkface': 'UTKFace',
                 'cifar10': 'CIFAR10',
-                'mnist': 'MNIST'}
+                'mnist': 'MNIST',
+                'att': 'ATT'}
     
     return datasets[dataset]
 
 def feature_size(dataset):
     feature_sizes = {'utkface': 2,
                      'cifar10': 10,
-                     'mnist': 10}
+                     'mnist': 10,
+                     'att': 40}
     
     return feature_sizes[dataset]
 
@@ -129,7 +131,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--dataset",
                         default='',
-                        help="Choose between [UTKFace, CIFAR10, MNIST]")
+                        help="Choose between [UTKFace, CIFAR10, MNIST, ATT]")
 
     parser.add_argument("--device",
                         default='cpu',
@@ -137,12 +139,12 @@ if __name__ == '__main__':
 
     parser.add_argument("--inferred-attribute",
                         default='',
-                        help="Important for Attribute Inference Attack: Attribute that will be inferred")
+                        help="Important for Attribute Inference Attack: Attribute that will be inferred -> UTKFace (race, gender, age), ATT (glasses)")
 
     args = parser.parse_args()
 
     # Check for correct dataset
-    if args.dataset.lower() != '' and args.dataset.lower() not in ['utkface', 'cifar10', 'mnist']:
+    if args.dataset.lower() != '' and args.dataset.lower() not in ['utkface', 'cifar10', 'mnist', 'att']:
         print(f'\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
         exit(0)
 

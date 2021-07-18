@@ -24,11 +24,17 @@ pip install -r requirements.txt
     ```bash
     python run-attacks.py --target ./Target/target-model-utkface.pth --dataset utkface --inferred-attribute race --device cuda
     ```
+    
+- All 3 attacks on AT&T dataset and AT&T-Target model
+    ```bash
+    python run-attacks.py --target ./Target/target-model-att.pth --dataset att --inferred-attribute glasses --device cuda
+    ```
 
 - Membership Inference on CIFAR10 dataset and CIFAR10-Target model
     ```bash
     python run-attacks.py --target ./Target/target-model-cifar10.pth --dataset cifar10 --device cuda
     ```
+
 
 ### Phase 2: Use your own trained target models
 Since we need to define the model class befor we can load the target model ([https://pytorch.org/tutorials/beginner/saving_loading_models.html](https://pytorch.org/tutorials/beginner/saving_loading_models.html)) to perform our attacks please use our class `CNN()` located in [Target/\_\_init__.py](Target/__init__.py). You can simply use our provided script [./train-target.py](train-target.py) to train your own target model. 

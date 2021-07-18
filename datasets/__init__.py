@@ -145,6 +145,8 @@ class AttributeInferenceAttackRawDataset(Dataset):
 
         if 'UTKFace' in self.root:
             lookup = {'age': 0, 'gender': 1, 'race': 2}
+        elif 'ATT' in self.root:
+            lookup = {'no-glasses': 0, 'glasses': 1}
 
         # collect all images from train eval and test directory
         for i in os.listdir(self.root + 'train/'):
@@ -213,6 +215,26 @@ class AttributeInferenceAttackRawDataset(Dataset):
 
                     final_data["image_file"].append(image)
                     final_data["label"].append(label)
+
+        if 'ATT' in self.root:
+            att_counter = {}
+
+            for idx in range(len(d['image_file'])):
+                image = d['image_file'][idx]
+                label = d['label'][idx]
+
+                # wears glasses
+                if label not in att_counter:
+                    att_counter[label] = 0
+
+                elif att_counter[label] < 149:
+                    att_counter[label] += 1
+
+                else:
+                    continue
+
+                final_data["image_file"].append(image)
+                final_data["label"].append(label)
 
         return final_data
 
