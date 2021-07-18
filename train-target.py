@@ -2,7 +2,7 @@
 
 from Target import CNN
 import torchvision.transforms as transforms
-from datasets import UTKFace, CIFAR10, MNIST
+from datasets import UTKFace, CIFAR10, MNIST, ATT
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
@@ -31,12 +31,12 @@ def eval_model(model, loader):
 
 def main(args):
     # transform for images
-    transform = transforms.Compose([transforms.Resize(size=32),
+    transform = transforms.Compose([transforms.Resize(size=(32,32)),
                               transforms.ToTensor(), 
                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     # datasets
-    if args.dataset.lower() not in ['cifar10', 'utkface', 'mnist']:
+    if args.dataset.lower() not in ['cifar10', 'utkface', 'mnist', 'att']:
         print(f'\n\n\t[!] Error ocurred: No such dataset \"{args.dataset}\"\n')
         exit(0)
     
@@ -60,6 +60,13 @@ def main(args):
         train_dataset = MNIST(dataset_path, train=True, transform=transform)
         eval_dataset = MNIST(dataset_path, eval=True, transform=transform)
         test_dataset = MNIST(dataset_path, test=True, transform=transform)
+    
+    elif args.dataset.lower() == 'att':
+        model = CNN(40).to(args.device)
+        dataset_path = './datasets/ATT/'
+        train_dataset = ATT(dataset_path, train=True, transform=transform)
+        eval_dataset = ATT(dataset_path, eval=True, transform=transform)
+        test_dataset = ATT(dataset_path, test=True, transform=transform)
     
     # dataloader
     train_loader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=32)
@@ -111,7 +118,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--dataset",
                         required=True,
-                        help="[CIFAR10, UTKFace]")
+                        help="[CIFAR10, UTKFace, MNIST, ATT]")
     
     parser.add_argument("--epochs",
                         default=50,
