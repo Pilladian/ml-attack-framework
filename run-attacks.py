@@ -147,7 +147,7 @@ def model_inversion_attack(target, dataset, device):
     print(f'\t\t     Label   Prediction   Probability')
     for c, (c_img, c_label) in enumerate(zip(rand_imgs, labels)):
         optimizer = torch.optim.Adam([c_img], lr=0.001)
-        adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 20000)
+        adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 2000)
 
         logits = target_model(adv_image)
         pred = torch.max(logits, dim=1).indices[0].item()
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                         help="File path to target model that should be tested")
 
     parser.add_argument("--dataset",
-                        default='',
+                        required=True,
                         help="Choose between [UTKFace, CIFAR10, MNIST, ATT]")
 
     parser.add_argument("--device",

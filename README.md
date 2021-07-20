@@ -30,11 +30,15 @@ pip install -r requirements.txt
     python run-attacks.py --target ./Target/target-model-att.pth --dataset att --inferred-attribute glasses --device cuda
     ```
 
-- Membership Inference on CIFAR10 dataset and CIFAR10-Target model
+- Membership Inference Attack and Model Inversion attack on CIFAR10 dataset and CIFAR10-Target model
     ```bash
     python run-attacks.py --target ./Target/target-model-cifar10.pth --dataset cifar10 --device cuda
     ```
 
+- Membership Inference Attack and Model Inversion attack on MNIST dataset and MNIST-Target model
+    ```bash
+    python run-attacks.py --target ./Target/target-model-mnist.pth --dataset mnist --device cuda
+    ```
 
 ### Phase 2: Use your own trained target models
 Since we need to define the model class befor we can load the target model ([https://pytorch.org/tutorials/beginner/saving_loading_models.html](https://pytorch.org/tutorials/beginner/saving_loading_models.html)) to perform our attacks please use our class `CNN()` located in [Target/\_\_init__.py](Target/__init__.py). You can simply use our provided script [./train-target.py](train-target.py) to train your own target model. 
@@ -45,6 +49,14 @@ Since we need to define the model class befor we can load the target model ([htt
 - CIFAR10 dataset
     ```bash
     python train-target.py --dataset cifar10 --epochs 100 --device cuda
+    ```
+- MNIST dataset
+    ```bash
+    python train-target.py --dataset mnist --epochs 100 --device cuda
+    ```
+- AT&T dataset
+    ```bash
+    python train-target.py --dataset att --epochs 100 --device cuda
     ```
 
 **[ ! ] Please note the following**
@@ -85,3 +97,6 @@ We then sample our attack dataset D in the following way:
 - D now contains pairs (i,j) with i = posterior and j = 1 (posterior belongs to image that has been used to train the target model) or j = 0 (posterior belongs to image that has not been used to train the target model)
 
 We then use D to train our attack model.
+
+### Model Inversion
+`TODO`

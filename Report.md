@@ -18,3 +18,9 @@
 | MNIST   | ~0.99       | ~0.56
 | UTKFace | ~0.80       | ~0.75
 
+---
+
+## Model Inversion Attack
+
+We were able to create adversarial samples. 
+The target model predicts the correct label with a probability up to 1, but unfortunately the adversarial image does not look like the original one.
