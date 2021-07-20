@@ -1,17 +1,21 @@
 # Python 3.8.5
 
-import argparse
-import os
-import torch
-import torch.nn as nn
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
+import torch.nn as nn
+import argparse
+import torch
+import os
 
+from Target import CNN
 import attrinf
 import meminf
+import modinv
 import datasets
-from Target import CNN
 
+import matplotlib.pyplot as plt
+from PIL import Image
+import numpy
 
 def lookup(dataset):
     datasets = {'utkface': 'UTKFace',
@@ -114,8 +118,64 @@ def membership_inference_attack(target, dataset, device):
     
     return attack_acc  
 
-def model_inversion_attack(target, dataset):
-    return 0
+def model_inversion_attack(target, dataset, device):
+    print(f'\t     [3.1] Load Target Model {target}')
+    target_model = CNN(feature_size(dataset))#.to(device)
+    target_model.load_state_dict(torch.load(target))#, map_location=device))
+
+    # generate random image 32x32 and empty label tensor 
+    rand_imgs, labels = modinv.init(dataset)
+
+    # demonstrate low epoch amount
+    print(f'\t     [3.2] Demonstration of low optimization rounds: 200\n')
+    print(f'\t\t     Label   Prediction   Probability')
+    for c, (c_img, c_label) in enumerate(zip(rand_imgs[:5], labels[:5])):
+        optimizer = torch.optim.Adam([c_img], lr=0.001)
+        adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 200)
+
+        logits = target_model(adv_image)
+        pred = torch.max(logits, dim=1).indices[0].item()
+        prob = torch.softmax(logits, -1).max().item()
+
+        print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+
+    #results
+    results = {'wrong': 0, 'correct': 0}
+
+    # generate one adv. sample for each class
+    print(f'\n\t     [3.3] Model Inversion Attack: Generate adversarial example for each class: 2000 rounds\n')
+    print(f'\t\t     Label   Prediction   Probability')
+    for c, (c_img, c_label) in enumerate(zip(rand_imgs, labels)):
+        optimizer = torch.optim.Adam([c_img], lr=0.001)
+        adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 20000)
+
+        logits = target_model(adv_image)
+        pred = torch.max(logits, dim=1).indices[0].item()
+        prob = torch.softmax(logits, -1).max().item()
+
+        if c == pred:
+            results['correct'] += 1
+        else:
+            results['wrong'] += 1
+
+        if dataset in ['cifar10', 'mnist', 'att']:
+            if c < 5:
+                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+            elif c % 5 == 0:
+                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")                
+        else:
+            print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+
+        # run this code to save the adversarial images
+        # x = plot_img(adv_image)
+        # x = adv_image.detach().cpu().numpy()[0]
+        # x = numpy.reshape(x, (32, 32, 3))
+        # img = Image.fromarray(x, 'RGB')
+        # img = img.resize((92, 112))
+        # img.save('test.png')
+        # exit()
+
+    return float(results['correct'] / (results['correct'] + results['wrong']))
 
 
 if __name__ == '__main__':
@@ -169,8 +229,7 @@ if __name__ == '__main__':
 
     # run model inversion attack
     print("\n\t[3] Model Inversion Attack")
-    print("\t\t[3.1] Not yet implemented")
-    #results['modelinv'] = model_inversion_attack(args.target, args.dataset.lower()) 
+    results['modelinv'] = model_inversion_attack(args.target, args.dataset.lower(), args.device) 
 
     # Output
     print(f"\n\n Attack Accuracies: \n\n\t \

@@ -46,8 +46,8 @@ def get_raw_attack_dataset(dataset, attr):
         dir_path = 'datasets/UTKFace/'
     elif dataset == 'att':
         dir_path = 'datasets/ATT/'
-        raw_set = AttributeInferenceAttackRawDataset(dir_path, attr=attr, transform=transform)
 
+    raw_set = AttributeInferenceAttackRawDataset(dir_path, attr=attr, transform=transform)
     raw_loader = torch.utils.data.DataLoader(raw_set, batch_size=32, shuffle=True)
 
     return raw_loader
@@ -84,7 +84,6 @@ def get_attack_loader(target_model, raw_loader, device):
 def train_attack_model(model, train_loader, epochs, loss_fn, optimizer, device):
     for epoch in range(epochs):
         model.train()
-
         for inputs, labels in train_loader:
             inputs = inputs.to(device)
             labels = labels.to(device)
