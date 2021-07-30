@@ -121,7 +121,7 @@ def membership_inference_attack(target, dataset, device):
 def model_inversion_attack(target, dataset, device):
     print(f'\t     [3.1] Load Target Model {target}')
     target_model = CNN(feature_size(dataset))#.to(device)
-    target_model.load_state_dict(torch.load(target))#, map_location=device))
+    target_model.load_state_dict(torch.load(target, map_location=device))
 
     # generate random image 32x32 and empty label tensor 
     rand_imgs, labels = modinv.init(dataset)

@@ -41,7 +41,7 @@ pip install -r requirements.txt
     ```
 
 ### Phase 2: Use your own trained target models
-Since we need to define the model class befor we can load the target model ([https://pytorch.org/tutorials/beginner/saving_loading_models.html](https://pytorch.org/tutorials/beginner/saving_loading_models.html)) to perform our attacks please use our class `CNN()` located in [Target/\_\_init__.py](Target/__init__.py). You can simply use our provided script [./train-target.py](train-target.py) to train your own target model. 
+Since we need to define the model class befor we can load the target model ([https://pytorch.org/tutorials/beginner/saving_loading_models.html](https://pytorch.org/tutorials/beginner/saving_loading_models.html)) to perform our attacks please use our class `CNN()` located in [Target/\_\_init__.py](Target/__init__.py). You can simply use our provided script [./train-target.py](train-target.py) to train your own target models. 
 - UTKFace dataset
     ```bash
     python train-target.py --dataset utkface --epochs 100 --device cuda
@@ -68,7 +68,7 @@ Since the argument you provide to our program is the used dataset, we need you t
 - put samples used to **train** the target model in `dataset/train/` (target-members)
 - put samples used to **evaluate** the target model in `dataset/eval/` (target-non-members)
 - put samples that will be used to **train** and **evaluate** the shadow model in `dataset/test/` (shadow-members and shadow-non-members)
-- rename `dataset` into one of [`CIFAR10`, `MNIST`, `UTKFace`] depending on your used samples 
+- rename `dataset` into one of [`CIFAR10`, `MNIST`, `UTKFace`, `ATT`] depending on your used samples 
 - move the created dataset into [datasets](datasets/) replacing the current split
 
 It is important that the samples you provide fullfil the requirements listed [here](datasets/README.md). You can now train your target models and after that run our implemented attacks against them.
@@ -78,8 +78,7 @@ It is important that the samples you provide fullfil the requirements listed [he
 ## Functionality of the Code
 
 ### Attribute Inference Attack
-First we train our target model using `train-target.py´.
-We then sample our attack dataset D in the following way:
+We sample our attack dataset D in the following way:
 
 - Load images as input and the provided attribute as labels
 - Query target model on inputs to obtain the posteriors of the last hidden layers
@@ -88,9 +87,8 @@ We then sample our attack dataset D in the following way:
 We then use D to train our attack model.
 
 ### Membership Inference Attack
-First we train our target model using `train-target.py´.
-We then train our shadow model using the shadow dataset (shadow dataset is from the same domain like the target training set).
-We then sample our attack dataset D in the following way:
+We train our shadow model using the shadow dataset (shadow dataset is from the same domain like the target training set).
+We sample our attack dataset D in the following way:
 
 - Load images from the target training set as positive samples and images that haven't been used for training the target as negative samples
 - Query target model on inputs to obtain the posteriors of the prediction
@@ -99,4 +97,5 @@ We then sample our attack dataset D in the following way:
 We then use D to train our attack model.
 
 ### Model Inversion
-`TODO`
+We use the Adam Optimizer to optimize a random vector `v` such that the prediction of the target model `f(v)` equals the given label `y`. 
+We do this for each class, the dataset provides.
