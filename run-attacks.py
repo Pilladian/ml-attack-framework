@@ -128,7 +128,7 @@ def model_inversion_attack(target, dataset, device):
 
     # demonstrate low epoch amount
     print(f'\t     [3.2] Demonstration of low optimization rounds: 200\n')
-    print(f'\t\t     Label   Prediction   Probability')
+    print(f'\t\t     Label   Prediction   Probability   Avg. Pixel Difference to Original Image')
     for c, (c_img, c_label) in enumerate(zip(rand_imgs[:5], labels[:5])):
         optimizer = torch.optim.Adam([c_img], lr=0.001)
         adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 200)
@@ -136,15 +136,16 @@ def model_inversion_attack(target, dataset, device):
         logits = target_model(adv_image)
         pred = torch.max(logits, dim=1).indices[0].item()
         prob = torch.softmax(logits, -1).max().item()
+        avg_pixel_diff = torch.sum(abs(c_img - adv_image)) / (c_img.shape[2]*c_img.shape[3])
 
-        print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+        print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}          {avg_pixel_diff:0.4f}")
 
     #results
     results = {'wrong': 0, 'correct': 0}
 
     # generate one adv. sample for each class
     print(f'\n\t     [3.3] Model Inversion Attack: Generate adversarial example for each class: 2000 rounds\n')
-    print(f'\t\t     Label   Prediction   Probability')
+    print(f'\t\t     Label   Prediction   Probability   Avg. Pixel Difference to Original Image')
     for c, (c_img, c_label) in enumerate(zip(rand_imgs, labels)):
         optimizer = torch.optim.Adam([c_img], lr=0.001)
         adv_image = modinv.MIFace(c_img, c_label, optimizer, target_model, 2000)
@@ -152,6 +153,7 @@ def model_inversion_attack(target, dataset, device):
         logits = target_model(adv_image)
         pred = torch.max(logits, dim=1).indices[0].item()
         prob = torch.softmax(logits, -1).max().item()
+        avg_pixel_diff = torch.sum(abs(c_img - adv_image)) / (c_img.shape[2]*c_img.shape[3])
 
         if c == pred:
             results['correct'] += 1
@@ -160,11 +162,11 @@ def model_inversion_attack(target, dataset, device):
 
         if dataset in ['cifar10', 'mnist', 'att']:
             if c < 5:
-                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}          {avg_pixel_diff:0.4f}")
             elif c % 5 == 0:
-                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")                
+                print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}          {avg_pixel_diff:0.4f}")                
         else:
-            print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}")
+            print(f"\t\t       {c:2.0f}        {pred:2.0f}          {prob:0.4f}          {avg_pixel_diff:0.4f}")
 
         # run this code to save the adversarial images
         # x = plot_img(adv_image)
@@ -235,4 +237,4 @@ if __name__ == '__main__':
     print(f"\n\n Attack Accuracies: \n\n\t \
                     Attribute-Inference-Attack: \t{results['attribute']:0.2f}\n\t \
                     Membership-Inference-Attack: \t{results['membership']:0.2f}\n\t \
-                    Model-Inversion-Attack: \t\t{results['modelinv']:0.2f}\n\n")
+                    Model-Inversion-Attack: \t\t{results['modelinv']:0.2f} (Explanation -> see Report.md)\n\n")

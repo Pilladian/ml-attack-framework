@@ -1,6 +1,11 @@
 # Privacy Enhancing Technologies - 2021
 > Universität des Saarlandes - PETs 2021 - Semester Project
 
+## Participants
+- Philipp Zimmermann (s8phzimm@stud.uni-saarland.de, 2574768)
+- Mohammed Raihan Hussain (s8mmhuss@stud.uni-saarland.de, 2577851)
+- HTMA Riyadh (s8htriya@stud.uni-saarland.de, 2577735)
+
 ## Setup Cloned Repository
 First create a virtual environment using:
 ```bash
