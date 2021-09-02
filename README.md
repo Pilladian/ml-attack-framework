@@ -1,4 +1,5 @@
-# Privacy Enhancing Technologies - 2021
+# Machine Learning Framework
+> Privacy Enhancing Technologies - 2021 --
 > Universität des Saarlandes - PETs 2021 - Semester Project
 
 ## Participants
